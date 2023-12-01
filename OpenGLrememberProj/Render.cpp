@@ -163,6 +163,8 @@ public:
 
 } light;  //создаем источник света
 
+int mapWH = 10;
+
 struct lowModel {
 	int x, y, angl;
 	lowModel(int x, int y, int angl): x(x), y(y), angl(angl){}
@@ -214,7 +216,7 @@ public:
 
 class item : public hitBox {
 public:
-	bool visible;
+	bool visible{1};
 	double points;
 
 	item(double width, double height, double depth, double posX, double posY, double posZ)
@@ -258,6 +260,66 @@ public:
 
 		return 0;
 	}
+
+	void alive() {
+		posX = 0;
+		posZ = 0;
+		visible = true;
+		dieAngl = 0;
+		frontBlock = false;
+		backBlock = false;
+		points = 0;
+	}
+};
+
+class fromTo : public hitBox {
+private: 
+	int endPosX, endPosY, startPosX, startPosY;
+public:
+	bool visible{ 0 };
+	double velocity{0.2};
+
+	fromTo(double width, double height, double depth)
+		: hitBox(width, height, depth, -10, 0, -10) {}
+
+	void move() {
+		if (fabs(posX) >= mapWH || fabs(posZ) >= mapWH) {
+			std::random_device rd;
+			std::mt19937 gen(rd());
+
+			std::uniform_int_distribution<int> distribution(-mapWH, mapWH);
+
+			startPosX = distribution(gen);
+			if (startPosX > 0) {
+				startPosX = mapWH;
+				startPosY = distribution(gen);
+				endPosX = -mapWH;
+				endPosY = distribution(gen);
+			}else {
+				startPosY = -mapWH;
+				startPosX = distribution(gen);
+				endPosY = mapWH;
+				endPosX = distribution(gen);
+			}
+
+			posX = startPosX;
+			posZ = startPosY;
+		}
+
+		int deltaX = endPosX - startPosX;
+		int deltaY = endPosY - startPosY;
+
+		double distance = std::sqrt(deltaX * deltaX + deltaY * deltaY);
+
+		double stepX = velocity * deltaX / distance;
+		double stepZ = velocity * deltaY / distance;
+
+		posX += stepX;
+		posZ += stepZ;
+
+		if (fabs(posX) >= mapWH || fabs(posZ) >= mapWH)
+			visible = 0;
+	}
 };
 
 //старые координаты мыши
@@ -283,7 +345,7 @@ void mouseEvent(OpenGL *ogl, int mX, int mY)
 	{
 		camera.fi1 += 0.01*dx;
 		camera.fi2 += -0.01*dy;
-	}
+	} 
 
 
 	if (OpenGL::isKeyPressed(VK_LBUTTON))
@@ -344,12 +406,7 @@ void mouseWheelEvent(OpenGL *ogl, int delta)
 	camera.camDist += 0.01*delta;
 }
 
-//обработчик нажатия кнопок клавиатуры
-void keyDownEvent(OpenGL* ogl, int key){}
-
-void keyUpEvent(OpenGL* ogl, int key){}
-
-ObjFile MCharacter, MApple, MTrash, MTree, MRock, MGrass, MFlower, MLowgrass;
+ObjFile MFox, MApple, MTrash, MTree, MRock, MGrass, MFlower, MLowgrass;
 
 Texture TFox, TApple, TTrash, TTree, TRock, TGrass, TFlower, TLowgrass;
 
@@ -360,7 +417,7 @@ std::vector<lowModel> Flower, Lowgrass;
 
 std::vector<item> Apple;
 const int appleCount = 5;
-const int updateApple = 20;
+const int updateApple = 10;
 int updateTime = updateApple;
 
 std::vector<item> Trash;
@@ -370,12 +427,26 @@ hitBox Tree[3] = { hitBox(1, 1, 2, -8, 0, -6),
 				hitBox(1, 1, 2, 4, 0, 2) ,
 				hitBox(1, 1, 2, -3, 0, 8) };
 
-hitBox Rock(8,8,8,6,2,-6);
+hitBox Rock(8, 8, 8, 6, 2, -6);
+fromTo Kaban(3, 3, 3);
 
 int record{ 0 };
 
-int mapWH = 10;
-//выполняется перед первым рендером
+
+
+//обработчик нажатия кнопок клавиатуры
+void keyDownEvent(OpenGL* ogl, int key) {
+	if (OpenGL::isKeyPressed('R')) {
+		Fox.alive();
+		updateTime = updateApple;
+		Time = 0;
+		stop = false;
+	}
+}
+
+void keyUpEvent(OpenGL* ogl, int key) {}
+
+
 void getRandXY(int&, int&);
 void getRandAngl(int&);
 
@@ -435,39 +506,27 @@ void initRender(OpenGL *ogl)
 	 //так как гит игнорит модели *.obj файлы, так как они совпадают по расширению с объектными файлами, 
 	 // создающимися во время компиляции, я переименовал модели в *.obj_m
 
+#define modelTexture(name,obj,bmp) loadModel("models\\"##obj".object", &M##name);\
+	T##name.loadTextureFromFile("textures//"##bmp".bmp");\
+	T##name.bindTexture();
 
 	glActiveTexture(GL_TEXTURE0);
-	loadModel("models\\Lowpoly_Fox.object", &MCharacter);
-	TFox.loadTextureFromFile("textures//Lowpoly_Fox.bmp");
-	TFox.bindTexture();
 
-	loadModel("models\\apple.object", &MApple);
-	TApple.loadTextureFromFile("textures//Rapple.bmp");
-	TApple.bindTexture();
+	modelTexture(Fox, "Lowpoly_Fox", "Lowpoly_Fox");
 
-	loadModel("models\\carrot.object", &MTrash);
-	TTrash.loadTextureFromFile("textures//carrot.bmp");
-	TTrash.bindTexture();
+	modelTexture(Apple, "apple", "Rapple");
 
-	loadModel("models\\tree.object", &MTree);
-	TTree.loadTextureFromFile("textures//tree.bmp");
-	TTree.bindTexture();
+	modelTexture(Trash, "carrot", "carrot");
 
-	loadModel("models\\Rock.object", &MRock);
-	TRock.loadTextureFromFile("textures//Rock.bmp");
-	TRock.bindTexture();
+	modelTexture(Tree, "tree", "tree");
 
-	loadModel("models\\Cube.object", &MGrass);
-	TGrass.loadTextureFromFile("textures//grass.bmp");
-	TGrass.bindTexture();
+	modelTexture(Rock, "Rock", "Rock");
 
-	loadModel("models\\flower.object", &MFlower);
-	TFlower.loadTextureFromFile("textures//flower.bmp");
-	TFlower.bindTexture();
-	
-	loadModel("models\\lowgrass.object", &MLowgrass);
-	TLowgrass.loadTextureFromFile("textures//lowgrass.bmp");
-	TLowgrass.bindTexture();
+	modelTexture(Grass, "Cube", "grass");
+
+	modelTexture(Flower, "flower", "flower");
+
+	modelTexture(Lowgrass, "lowgrass", "lowgrass2");
 
 	tick_n = GetTickCount();
 	tick_o = tick_n;
@@ -582,10 +641,15 @@ void move() {
 			}
 	}
 
-	if (Fox.isCollidingVEC(Trash) || fabs(Fox.posX) > mapWH || fabs(Fox.posZ) > mapWH)
+	if (Fox.isCollidingVEC(Trash) 
+		|| fabs(Fox.posX) > mapWH 
+		|| fabs(Fox.posZ) > mapWH
+		|| Fox.isColliding(&Kaban, 0)
+		||  Fox.dieAngl > 0)
 		if (Fox.dieAngl != 45) {
 			Fox.dieAngl++;
 			stop = true;
+			record = Fox.points > record ? Fox.points : record;
 		}
 		else
 			Fox.visible = 0;
@@ -619,6 +683,11 @@ void getRandAngl(int& angl) {
 	angl = distribution(gen);
 }
 
+void kabanGo() {
+	if(Kaban.visible)
+		Kaban.move();
+}
+
 void Render(OpenGL* ogl)
 {
 	if (!stop) {
@@ -636,6 +705,9 @@ void Render(OpenGL* ogl)
 		}
 		updateTime += updateApple;
 	}
+
+	if (Time >= updateTime - 5)
+		Kaban.visible = true;
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -666,6 +738,7 @@ void Render(OpenGL* ogl)
 	glMaterialf(GL_FRONT, GL_SHININESS, sh);
 
 
+	kabanGo();
 	move();
 	
 
@@ -707,6 +780,7 @@ void Render(OpenGL* ogl)
 	//RenderHitBox(Tree[1],1);
 	//RenderHitBox(Tree[2],1);
 	//RenderHitBox(Rock, 1);
+	RenderHitBox(Kaban, 1);
 
 	//цветы
 	s[1].UseShader();
@@ -813,7 +887,7 @@ void Render(OpenGL* ogl)
 			glRotated(Fox.dieAngl, 0.0, 0.0, 1.0);
 
 			TFox.bindTexture();
-			MCharacter.DrawObj();
+			MFox.DrawObj();
 		POP;
 	}
 	Shader::DontUseShaders();
@@ -845,7 +919,9 @@ void RenderGUI(OpenGL * ogl)
 
 
 	std::stringstream ss;
+	ss << "Переродиться - R" << std::endl << std::endl;
 	ss << "Коорд. лисы: (" << Fox.posX << ", " << Fox.posZ << ", " << Fox.posY << ")" << " angl = " << (int)Fox.angl % 360 << std::endl;
+	ss << "Коорд. кабана: (" << Kaban.posX << ", " << Kaban.posZ << ", " << Kaban.posY << ")" << " angl = " << (int)Kaban.angl % 360 << std::endl;
 	ss << "Очки: " << Fox.points << std::endl;
 	ss << "Time: " << Time << std::endl;
 	ss << "~~~~~~~~~~~~~" << std::endl;
