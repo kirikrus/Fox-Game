@@ -437,35 +437,35 @@ void initRender(OpenGL *ogl)
 
 
 	glActiveTexture(GL_TEXTURE0);
-	loadModel("models\\Lowpoly_Fox.obj", &MCharacter);
+	loadModel("models\\Lowpoly_Fox.object", &MCharacter);
 	TFox.loadTextureFromFile("textures//Lowpoly_Fox.bmp");
 	TFox.bindTexture();
 
-	loadModel("models\\apple.obj", &MApple);
+	loadModel("models\\apple.object", &MApple);
 	TApple.loadTextureFromFile("textures//Rapple.bmp");
 	TApple.bindTexture();
 
-	loadModel("models\\carrot.obj", &MTrash);
+	loadModel("models\\carrot.object", &MTrash);
 	TTrash.loadTextureFromFile("textures//carrot.bmp");
 	TTrash.bindTexture();
 
-	loadModel("models\\tree.obj", &MTree);
+	loadModel("models\\tree.object", &MTree);
 	TTree.loadTextureFromFile("textures//tree.bmp");
 	TTree.bindTexture();
 
-	loadModel("models\\Rock.obj", &MRock);
+	loadModel("models\\Rock.object", &MRock);
 	TRock.loadTextureFromFile("textures//Rock.bmp");
 	TRock.bindTexture();
 
-	loadModel("models\\Cube.obj", &MGrass);
+	loadModel("models\\Cube.object", &MGrass);
 	TGrass.loadTextureFromFile("textures//grass.bmp");
 	TGrass.bindTexture();
 
-	loadModel("models\\flower.obj", &MFlower);
+	loadModel("models\\flower.object", &MFlower);
 	TFlower.loadTextureFromFile("textures//flower.bmp");
 	TFlower.bindTexture();
 	
-	loadModel("models\\lowgrass.obj", &MLowgrass);
+	loadModel("models\\lowgrass.object", &MLowgrass);
 	TLowgrass.loadTextureFromFile("textures//lowgrass.bmp");
 	TLowgrass.bindTexture();
 
