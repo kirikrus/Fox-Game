@@ -52,13 +52,15 @@ public:
 	//углы поворота камеры
 	double fi1, fi2;
 
+	double x{ 0 }, y{ 0 }, z{0};
+
 	
 	//значния масеры по умолчанию
 	CustomCamera()
 	{
-		camDist = 15;
+		camDist = 25;
 		fi1 = 1;
-		fi2 = 1;
+		fi2 = 30/57.;
 	}
 
 	
@@ -184,33 +186,55 @@ public:
 		depth = this->depth;
 	}
 
-	bool isColliding(hitBox other[], int lenth) {
-		double thisFrontX = posX + height / 2.0 * cos(angl / 57. - PI / 2.),
-			thisFrontY = posZ + height / 2.0 * sin(angl / 57. - PI / 2.);
+	bool isColliding(hitBox other[], int lenth, bool onlyFront = 1, bool isVisible = 1) {
+		if (isVisible) {
+			double thisFrontX = posX + height / 2.0 * cos(angl / 57. - PI / 2.),
+				thisFrontY = posZ + height / 2.0 * sin(angl / 57. - PI / 2.),
+				thisBackX = posX - height / 2.0 * cos(angl / 57. - PI / 2.),
+				thisBackY = posZ - height / 2.0 * sin(angl / 57. - PI / 2.),
+				thisLeftX = posX + width / 2.0 * cos(angl / 57.),
+				thisLeftY = posZ + width / 2.0 * sin(angl / 57.),
+				thisRightX = posX - width / 2.0 * cos(angl / 57.),
+				thisRightY = posZ - width / 2.0 * sin(angl / 57.);
 
-		double otherMinX, otherMaxX, otherMinZ, otherMaxZ;
+			double otherMinX, otherMaxX, otherMinY, otherMaxY;
 
-		for (int i{ 0 }; i <= lenth; i++) {
-			otherMinX = other[i].posX - other[i].width / 2.;
-			otherMaxX = other[i].posX + other[i].width / 2.;
-			otherMinZ = other[i].posZ - other[i].height / 2.;
-			otherMaxZ = other[i].posZ + other[i].height / 2.;
+			for (int i{ 0 }; i <= lenth; i++) {
+				otherMinX = other[i].posX - other[i].width / 2.;
+				otherMaxX = other[i].posX + other[i].width / 2.;
+				otherMinY = other[i].posZ - other[i].height / 2.;
+				otherMaxY = other[i].posZ + other[i].height / 2.;
 
-			//отображение точек хитбокса
-			/*glPointSize(5.0);
-			glColor3f(1.0, 0.0, 0.0);
-			glBegin(GL_POINTS);
+				//отображение точек хитбокса
+				glPointSize(5.0);
+				glColor3f(1.0, 0.0, 0.0);
+				glBegin(GL_POINTS);
 				glVertex3d(thisFrontX, thisFrontY, 1);
-			glEnd();*/
+				glVertex3d(thisBackX, thisBackY, 1);
+				glVertex3d(thisLeftX, thisLeftY, 1);
+				glVertex3d(thisRightX, thisRightY, 1);
+				glEnd();
 
-			// Проверка по оси X
-			if (thisFrontX >= otherMinX && thisFrontX <= otherMaxX)
-				// Проверка по оси Y
-				if (thisFrontY >= otherMinZ && thisFrontY <= otherMaxZ)
-					return true;
+				if (!onlyFront) {
+					// Проверка по оси X
+					if (thisFrontX >= otherMinX && thisFrontX <= otherMaxX
+						|| thisBackX >= otherMinX && thisBackX <= otherMaxX
+						|| thisLeftX >= otherMinX && thisLeftX <= otherMaxX
+						|| thisRightX >= otherMinX && thisRightX <= otherMaxX)
+						// Проверка по оси Y
+						if (thisFrontY >= otherMinY && thisFrontY <= otherMaxY
+							|| thisBackY >= otherMinY && thisBackY <= otherMaxY
+							|| thisLeftY >= otherMinY && thisLeftY <= otherMaxY
+							|| thisRightY >= otherMinY && thisRightY <= otherMaxY)
+							return true;
+				}
+				else if (thisFrontX >= otherMinX && thisFrontX <= otherMaxX)
+					if (thisFrontY >= otherMinY && thisFrontY <= otherMaxY)
+						return true;
+			}
+
+			return false;
 		}
-
-		return false;
 	}
 };
 
@@ -226,35 +250,46 @@ public:
 class character : public hitBox {
 public:
 	double velocity, points;
-	bool frontBlock{ 0 }, backBlock{ 0 }, visible{ 1 };
+	bool frontBlock{ 0 }, backBlock{ 0 };
+	bool visible{ 1 };
 	int dieAngl{ 0 };
 
 	character(double width, double height, double depth, double posX, double posY, double posZ)
 		: velocity(0), hitBox(width, height, depth, posX, posY, posZ){}
 
-	int isCollidingVEC(std::vector<item> other) {
+	int isCollidingVEC(std::vector<item> other, bool onlyFront = 0) {
 		double thisFrontX = posX + height / 2.0 * cos(angl / 57. - PI / 2.),
-			thisFrontY = posZ + height / 2.0 * sin(angl / 57. - PI / 2.);
+			thisFrontY = posZ + height / 2.0 * sin(angl / 57. - PI / 2.),
+			thisBackX = posX - height / 2.0 * cos(angl / 57. - PI / 2.),
+			thisBackY = posZ - height / 2.0 * sin(angl / 57. - PI / 2.),
+			thisLeftX = posX + width / 2.0 * cos(angl / 57.),
+			thisLeftY = posZ + width / 2.0 * sin(angl / 57.),
+			thisRightX = posX - width / 2.0 * cos(angl / 57.),
+			thisRightY = posZ - width / 2.0 * sin(angl / 57.);
 
-		double otherMinX{ 0 }, otherMaxX{ 0 }, otherMinZ{ 0 }, otherMaxZ{ 0 };
+		double otherMinX{ 0 }, otherMaxX{ 0 }, otherMinY{ 0 }, otherMaxY{ 0 };
 
 		for (int i{ 0 }; i < other.size(); i++) {
 			otherMinX = other[i].posX - other[i].width / 2.;
 			otherMaxX = other[i].posX + other[i].width / 2.;
-			otherMinZ = other[i].posZ - other[i].height / 2.;
-			otherMaxZ = other[i].posZ + other[i].height / 2.;
+			otherMinY = other[i].posZ - other[i].height / 2.;
+			otherMaxY = other[i].posZ + other[i].height / 2.;
 
-			//отображение точек хитбокса
-			//glPointSize(5.0);
-			//glColor3f(1.0, 0.0, 0.0);
-			//glBegin(GL_POINTS);
-			//glVertex3d(thisFrontX, thisFrontY, 1);
-			//glEnd();
-
-			// Проверка по оси X
-			if (thisFrontX >= otherMinX && thisFrontX <= otherMaxX)
-				// Проверка по оси Y
-				if (thisFrontY >= otherMinZ && thisFrontY <= otherMaxZ)
+			if (!onlyFront) {
+				// Проверка по оси X
+				if (thisFrontX >= otherMinX && thisFrontX <= otherMaxX
+					|| thisBackX >= otherMinX && thisBackX <= otherMaxX
+					|| thisLeftX >= otherMinX && thisLeftX <= otherMaxX
+					|| thisRightX >= otherMinX && thisRightX <= otherMaxX)
+					// Проверка по оси Y
+					if (thisFrontY >= otherMinY && thisFrontY <= otherMaxY
+						|| thisBackY >= otherMinY && thisBackY <= otherMaxY
+						|| thisLeftY >= otherMinY && thisLeftY <= otherMaxY
+						|| thisRightY >= otherMinY && thisRightY <= otherMaxY)
+						return i+1;
+			}
+			else if (thisFrontX >= otherMinX && thisFrontX <= otherMaxX)
+				if (thisFrontY >= otherMinY && thisFrontY <= otherMaxY)
 					return i+1;
 		}
 
@@ -301,7 +336,7 @@ public:
 				endPosY = mapWH;
 				endPosX = distribution(gen);
 			}
-
+			angl = fabs(atan2(endPosX - startPosX, endPosY - startPosY)) * 57;
 			posX = startPosX;
 			posZ = startPosY;
 		}
@@ -330,7 +365,7 @@ float zoom=1;
 float Time = 0;
 int tick_o = 0;
 int tick_n = 0;
-bool stop{0};
+bool stop{ 0 }, isHitBox{ 0 };
 
 //обработчик движения мыши
 void mouseEvent(OpenGL *ogl, int mX, int mY)
@@ -406,9 +441,9 @@ void mouseWheelEvent(OpenGL *ogl, int delta)
 	camera.camDist += 0.01*delta;
 }
 
-ObjFile MFox, MApple, MTrash, MTree, MRock, MGrass, MFlower, MLowgrass;
+ObjFile MFox, MApple, MTrash, MTree, MRock, MGrass, MFlower, MLowgrass, MKaban;
 
-Texture TFox, TApple, TTrash, TTree, TRock, TGrass, TFlower, TLowgrass;
+Texture TFox, TApple, TTrash, TTree, TRock, TGrass, TFlower, TLowgrass, TKaban;
 
 const double scaleFox = 0.02; //коэф уменьшения модельки
 character Fox(1, 2.5, 2, 0, 0, 0);
@@ -428,7 +463,7 @@ hitBox Tree[3] = { hitBox(1, 1, 2, -8, 0, -6),
 				hitBox(1, 1, 2, -3, 0, 8) };
 
 hitBox Rock(8, 8, 8, 6, 2, -6);
-fromTo Kaban(3, 3, 3);
+fromTo Kaban(2, 2, 2);
 
 int record{ 0 };
 
@@ -436,12 +471,17 @@ int record{ 0 };
 
 //обработчик нажатия кнопок клавиатуры
 void keyDownEvent(OpenGL* ogl, int key) {
+	//респавн
 	if (OpenGL::isKeyPressed('R')) {
 		Fox.alive();
 		updateTime = updateApple;
 		Time = 0;
 		stop = false;
 	}
+
+	//хитбоксы
+	if (OpenGL::isKeyPressed('B'))
+		isHitBox = !isHitBox;
 }
 
 void keyUpEvent(OpenGL* ogl, int key) {}
@@ -528,6 +568,8 @@ void initRender(OpenGL *ogl)
 
 	modelTexture(Lowgrass, "lowgrass", "lowgrass2");
 
+	modelTexture(Kaban, "goose", "goose");
+
 	tick_n = GetTickCount();
 	tick_o = tick_n;
 
@@ -541,7 +583,9 @@ void initRender(OpenGL *ogl)
 		Apple.push_back(item(1, 1, 1, x, 0, y));
 	}
 	for (int i{ 1 }; i <= trashCount; i++) {
-		getRandXY(x, y);
+		do// чтоб морковки не спавнились в центре
+			getRandXY(x, y);
+		while (x >= -1 && x <= 1 && y <= 1 && y >= -1);
 		Trash.push_back(item(1, 1, 1, x, 0, y));
 	}
 
@@ -556,6 +600,9 @@ void initRender(OpenGL *ogl)
 		getRandAngl(angl);
 		Lowgrass.push_back(lowModel(x, y, angl));
 	}
+
+	Fox.velocity = 4 * scaleFox;
+	Kaban.velocity = 0.15;
 }
 
 void normalize(double& x, double& y) {
@@ -607,12 +654,10 @@ void move() {
 
 	normalize(x, y); //делаем единичный вектор
 
-	Fox.velocity = 4 * scaleFox;
-
 	if (!Fox.dieAngl) {
 		if (!Fox.frontBlock)
 			if (OpenGL::isKeyPressed('W')) {
-				if ((Fox.isColliding(Tree, 2) || Fox.isColliding(&Rock, 0)) && !(Fox.frontBlock || Fox.backBlock)) {
+				if ((Fox.isColliding(Tree, 2, 1) || Fox.isColliding(&Rock, 0,1)) && !(Fox.frontBlock || Fox.backBlock)) {
 					Fox.frontBlock = 1;
 					Fox.backBlock = 0;
 				}
@@ -627,7 +672,7 @@ void move() {
 
 		if (!Fox.backBlock)
 			if (OpenGL::isKeyPressed('S')) {
-				if ((Fox.isColliding(Tree, 2) || Fox.isColliding(&Rock, 0)) && !(Fox.frontBlock || Fox.backBlock)) {
+				if ((Fox.isColliding(Tree, 2,1) || Fox.isColliding(&Rock, 0,1)) && !(Fox.frontBlock || Fox.backBlock)) {
 					Fox.frontBlock = 0;
 					Fox.backBlock = 1;
 				}
@@ -644,8 +689,8 @@ void move() {
 	if (Fox.isCollidingVEC(Trash) 
 		|| fabs(Fox.posX) > mapWH 
 		|| fabs(Fox.posZ) > mapWH
-		|| Fox.isColliding(&Kaban, 0)
-		||  Fox.dieAngl > 0)
+		|| Fox.isColliding(&Kaban, 0, 0,Kaban.visible)
+		|| Fox.dieAngl > 0)
 		if (Fox.dieAngl != 45) {
 			Fox.dieAngl++;
 			stop = true;
@@ -690,6 +735,7 @@ void kabanGo() {
 
 void Render(OpenGL* ogl)
 {
+
 	if (!stop) {
 		tick_o = tick_n;
 		tick_n = GetTickCount();
@@ -770,17 +816,18 @@ void Render(OpenGL* ogl)
 
 	location = glGetUniformLocationARB(s[0].program, "camera");
 	glUniform3fARB(location, camera.pos.X(), camera.pos.Y(), camera.pos.Z());
-
-
-	//хит боксы
-	//RenderHitBox(Fox,1);
-	//RenderHitBox(Apple,1);
-	//RenderHitBox(Trash,1);
-	//RenderHitBox(Tree[0],1);
-	//RenderHitBox(Tree[1],1);
-	//RenderHitBox(Tree[2],1);
-	//RenderHitBox(Rock, 1);
-	RenderHitBox(Kaban, 1);
+	
+	//хитбоксы
+	if (isHitBox) {
+		RenderHitBox(Fox, 1);
+		RenderHitBox(Apple, 1);
+		RenderHitBox(Trash, 1);
+		RenderHitBox(Tree[0], 1);
+		RenderHitBox(Tree[1], 1);
+		RenderHitBox(Tree[2], 1);
+		RenderHitBox(Rock, 1);
+		RenderHitBox(Kaban, 1);
+	}
 
 	//цветы
 	s[1].UseShader();
@@ -815,7 +862,6 @@ void Render(OpenGL* ogl)
 		MGrass.DrawObj();
 	POP;
 
-	s[1].UseShader();
 	int l = glGetUniformLocationARB(s[1].program, "rock");
 	glUniform1iARB(l, 0);
 
@@ -873,6 +919,20 @@ void Render(OpenGL* ogl)
 			MApple.DrawObj();
 		POP;
 	}
+	//Гусь
+	if (Kaban.visible) {
+		l = glGetUniformLocationARB(s[1].program, "goose");
+		glUniform1iARB(l, 0);
+		PUSH;
+			glRotated(90, 1.0, 0.0, 0.0);
+			glTranslated(Kaban.posX, Kaban.posY, -Kaban.posZ);
+			glScaled(1, 1, 1);
+			glRotated(Kaban.angl, 0.0, 1.0, 0.0);
+
+			TKaban.bindTexture();
+			MKaban.DrawObj();
+		POP;
+	}
 
 	//лиса
 	if (Fox.visible) {
@@ -900,7 +960,6 @@ bool gui_init = false;
 //рисует интерфейс, вызывется после обычного рендера
 void RenderGUI(OpenGL * ogl)
 {
-
 	Shader::DontUseShaders();
 
 	glMatrixMode(GL_PROJECTION);
@@ -919,7 +978,9 @@ void RenderGUI(OpenGL * ogl)
 
 
 	std::stringstream ss;
-	ss << "Переродиться - R" << std::endl << std::endl;
+	ss << mouseX << mouseY << std::endl;
+	ss << "Переродиться - R" << std::endl;
+	ss << "Включить хитбоксы - B" << std::endl << std::endl;
 	ss << "Коорд. лисы: (" << Fox.posX << ", " << Fox.posZ << ", " << Fox.posY << ")" << " angl = " << (int)Fox.angl % 360 << std::endl;
 	ss << "Коорд. кабана: (" << Kaban.posX << ", " << Kaban.posZ << ", " << Kaban.posY << ")" << " angl = " << (int)Kaban.angl % 360 << std::endl;
 	ss << "Очки: " << Fox.points << std::endl;

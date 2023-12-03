@@ -128,7 +128,7 @@ void GuiTextRectangle::setText(const char* text, char r, char g , char b )
 	std::fill<byte*, byte>((byte*)(_d->b), (byte*)(_d->b) + _d->w * _d->h * 3, (byte)255);
 
 	SetBkColor(_d->dc, RGB(255, 255, 255));
-	SetTextColor(_d->dc, RGB(r, g, b));
+	SetTextColor(_d->dc, RGB(0, 255, 0));
 	
 	//рисуем текст
 	DrawText(_d->dc, text, -1, &(_d->r), 0);
