@@ -10,7 +10,9 @@
 class Camera : public Object
 {
 public:
-
+	double fi1;
+	double fi2;
+	double camDist;
 	Vector3 lookPoint;
 	Vector3 normal;
 
@@ -19,14 +21,12 @@ public:
 
 	}
 
-	virtual void LookAt()
-	{
-		
-	}
+	virtual void LookAt(){}
 
-	virtual void SetUpCamera()
-	{
+	virtual void SetUpCamera(){}
 
+	virtual Vector3 Getforward(){
+		return Vector3(0, 0, 0);
 	}
 
 	Ray getLookRay(int wndX, int wndY, double FOV, double aspect)

@@ -11,7 +11,7 @@
 
 #include "MyOGL.h"
 
-#include "Camera.h"
+#include "camera.h"
 #include "Light.h"
 #include "Primitives.h"
 
@@ -40,20 +40,10 @@ ObjFile *model;
 
 Shader s[10];  //массивчик для десяти шейдеров
 
-
-
-
 //класс для настройки камеры
 class CustomCamera : public Camera
 {
 public:
-	//дистанция камеры
-	double camDist;
-	//углы поворота камеры
-	double fi1, fi2;
-
-	double x{ 0 }, y{ 0 }, z{0};
-
 	
 	//значния масеры по умолчанию
 	CustomCamera()
@@ -67,7 +57,6 @@ public:
 	//считает позицию камеры, исходя из углов поворота, вызывается движком
 	virtual void SetUpCamera()
 	{
-
 		lookPoint.setCoords(0, 0, 0);
 
 		pos.setCoords(camDist*cos(fi2)*cos(fi1),
@@ -82,17 +71,16 @@ public:
 		LookAt();
 	}
 
-	void CustomCamera::LookAt()
+	virtual void CustomCamera::LookAt()
 	{
 		gluLookAt(pos.X(), pos.Y(), pos.Z(), lookPoint.X(), lookPoint.Y(), lookPoint.Z(), normal.X(), normal.Y(), normal.Z());
 	}
 
-	auto Getforward() {
+	virtual Vector3 Getforward() {
 		return (lookPoint - pos).normolize();
 	}
 
-}  camera;   //создаем объект камеры
-
+}CAM  ;   
 
 //Класс для настройки света
 class CustomLight : public Light
@@ -357,6 +345,28 @@ public:
 	}
 };
 
+character Fox(1, 2.5, 2, 0, 0, 0);
+
+class WASDcamera :public CustomCamera
+{
+public:
+	WASDcamera()
+	{
+		lookPoint.setCoords(0, 0, 2);
+		pos.setCoords(Fox.posX, Fox.posZ, 2);
+		normal.setCoords(0, 0, 1);
+	}
+
+	virtual void SetUpCamera()
+	{
+		pos.setCoords(cos(fi1) + Fox.posX,
+			sin(fi1) + Fox.posZ,
+			sin(fi2)+2);
+		lookPoint.setCoords(Fox.posX, Fox.posZ, 2);
+		LookAt();
+	}
+} WASDCAM;
+
 //старые координаты мыши
 int mouseX = 0, mouseY = 0;
 
@@ -367,6 +377,9 @@ int tick_o = 0;
 int tick_n = 0;
 bool stop{ 0 }, isHitBox{ 0 }, pause{0};
 
+Camera* camera = &CAM;
+int cameraType = 0;
+
 //обработчик движения мыши
 void mouseEvent(OpenGL *ogl, int mX, int mY)
 {
@@ -374,53 +387,17 @@ void mouseEvent(OpenGL *ogl, int mX, int mY)
 	int dy = mouseY - mY;
 	mouseX = mX;
 	mouseY = mY;
-
-	//меняем углы камеры при нажатой левой кнопке мыши
+	
+	if (cameraType == 1) {
+		camera->fi1 += 0.01 * dx;
+		camera->fi2 += -0.01 * dy;
+	}
+	
 	if (OpenGL::isKeyPressed(VK_RBUTTON))
 	{
-		camera.fi1 += 0.01*dx;
-		camera.fi2 += -0.01*dy;
-	} 
-
-
-	if (OpenGL::isKeyPressed(VK_LBUTTON))
-	{
-		offsetX -= 1.0*dx/ogl->getWidth()/zoom;
-		offsetY += 1.0*dy/ogl->getHeight()/zoom;
+		camera->fi1 += 0.01 * dx;
+		camera->fi2 += -0.01 * dy;
 	}
-
-
-	
-	//двигаем свет по плоскости, в точку где мышь
-	if (OpenGL::isKeyPressed('G') && !OpenGL::isKeyPressed(VK_LBUTTON))
-	{
-		LPPOINT POINT = new tagPOINT();
-		GetCursorPos(POINT);
-		ScreenToClient(ogl->getHwnd(), POINT);
-		POINT->y = ogl->getHeight() - POINT->y;
-
-		Ray r = camera.getLookRay(POINT->x, POINT->y,60,ogl->aspect);
-
-		double z = light.pos.Z();
-
-		double k = 0, x = 0, y = 0;
-		if (r.direction.Z() == 0)
-			k = 0;
-		else
-			k = (z - r.origin.Z()) / r.direction.Z();
-
-		x = k*r.direction.X() + r.origin.X();
-		y = k*r.direction.Y() + r.origin.Y();
-
-		light.pos = Vector3(x, y, z);
-	}
-
-	if (OpenGL::isKeyPressed('G') && OpenGL::isKeyPressed(VK_LBUTTON))
-	{
-		light.pos = light.pos + Vector3(0, 0, 0.02*dy);
-	}
-
-	
 }
 
 //обработчик вращения колеса  мыши
@@ -433,12 +410,12 @@ void mouseWheelEvent(OpenGL *ogl, int delta)
 	zoom += 0.2*zoom*_tmpZ;
 
 
-	if (delta < 0 && camera.camDist <= 1)
+	if (delta < 0 && camera->camDist <= 1)
 		return;
-	if (delta > 0 && camera.camDist >= 100)
+	if (delta > 0 && camera->camDist >= 100)
 		return;
 
-	camera.camDist += 0.01*delta;
+	camera->camDist += 0.01*delta;
 }
 
 ObjFile MFox, MApple, MTrash, MTree, MRock, MGrass, MFlower, MLowgrass, MKaban;
@@ -446,7 +423,6 @@ ObjFile MFox, MApple, MTrash, MTree, MRock, MGrass, MFlower, MLowgrass, MKaban;
 Texture TFox, TApple, TTrash, TTree, TRock, TGrass, TFlower, TLowgrass, TKaban;
 
 const double scaleFox = 0.02; //коэф уменьшения модельки
-character Fox(1, 2.5, 2, 0, 0, 0);
 
 std::vector<lowModel> Flower, Lowgrass;
 
@@ -467,8 +443,6 @@ fromTo Kaban(2, 2, 2);
 
 int record{ 0 };
 
-
-
 //обработчик нажатия кнопок клавиатуры
 void keyDownEvent(OpenGL* ogl, int key) {
 	//респавн
@@ -486,6 +460,20 @@ void keyDownEvent(OpenGL* ogl, int key) {
 	//пауза
 	if (OpenGL::isKeyPressed('P'))
 		pause = !pause;
+
+	//первое лиц
+	if (OpenGL::isKeyPressed('F')) {
+		if (cameraType == 1) {
+			cameraType = 0;
+			ogl->mainCamera = &CAM;
+			camera = &CAM;
+		}
+		else if (cameraType == 0) {
+			cameraType = 1;
+			ogl->mainCamera = &WASDCAM;
+			camera = &WASDCAM;
+		}
+	}
 }
 
 void keyUpEvent(OpenGL* ogl, int key) {}
@@ -496,7 +484,6 @@ void getRandAngl(int&);
 
 void initRender(OpenGL *ogl)
 {
-
 	//настройка текстур
 
 	//4 байта на хранение пикселя
@@ -512,8 +499,9 @@ void initRender(OpenGL *ogl)
 
 
 	//камеру и свет привязываем к "движку"
-	ogl->mainCamera = &camera;
-	//ogl->mainCamera = &WASDcam;
+	//ogl->mainCamera = &camera;
+	ogl->mainCamera = camera;
+
 	ogl->mainLight = &light;
 
 	// нормализация нормалей : их длины будет равна 1
@@ -653,8 +641,8 @@ void RenderHitBox(hitBox& box, int ZY = 0)
 
 
 void move() {
-	double x = camera.Getforward().X(),
-		y = camera.Getforward().Y();
+	double x = camera->Getforward().X(),
+		y = camera->Getforward().Y();
 
 	normalize(x, y); //делаем единичный вектор
 
@@ -671,7 +659,7 @@ void move() {
 				}
 				Fox.posZ += y * Fox.velocity;
 				Fox.posX += x * Fox.velocity;
-				Fox.angl = camera.fi1 * 57 - 90;
+				Fox.angl = camera->fi1 * 57 - 90;
 			}
 
 		if (!Fox.backBlock)
@@ -686,7 +674,7 @@ void move() {
 				}
 				Fox.posZ -= y * Fox.velocity;
 				Fox.posX -= x * Fox.velocity;
-				Fox.angl = camera.fi1 * 57 + 90;
+				Fox.angl = camera->fi1 * 57 + 90;
 			}
 	}
 
@@ -820,7 +808,7 @@ void Render(OpenGL* ogl)
 	glUniform4fARB(location, 0.9, 0.8, 0.3, 25.6);
 
 	location = glGetUniformLocationARB(s[0].program, "camera");
-	glUniform3fARB(location, camera.pos.X(), camera.pos.Y(), camera.pos.Z());
+	glUniform3fARB(location, camera->pos.X(), camera->pos.Y(), camera->pos.Z());
 
 	//хитбоксы
 	if (isHitBox) {
@@ -977,12 +965,13 @@ void RenderGUI(OpenGL* ogl)
 	glActiveTexture(GL_TEXTURE0);
 
 	GuiTextRectangle rec;
-	rec.setSize(400, 150);
-	rec.setPosition(10, ogl->getHeight() - 150 - 10);
+	rec.setSize(400, 200);
+	rec.setPosition(10, ogl->getHeight() - 200 - 10);
 
 
 	std::stringstream ss;
-	ss << mouseX << " " << mouseY << std::endl;
+	ss << "Сменить вид - F" << std::endl;
+	ss << "Пауза - P" << std::endl;
 	ss << "Переродиться - R" << std::endl;
 	ss << "Включить хитбоксы - B" << std::endl << std::endl;
 	ss << "Коорд. лисы: (" << Fox.posX << ", " << Fox.posZ << ", " << Fox.posY << ")" << " angl = " << (int)Fox.angl % 360 << std::endl;
