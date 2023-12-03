@@ -120,7 +120,10 @@ int Texture::RGBtoChar(__in RGBTRIPLE *arr, __in int width, __in int height, __o
 			*(mas + i*width * 4 + j * 4 + 0) = arr[(i)*width + j].rgbtRed;
 			*(mas + i*width * 4 + j * 4 + 1) = arr[(i)*width + j].rgbtGreen;
 			*(mas + i*width * 4 + j * 4 + 2) = arr[(i)*width + j].rgbtBlue;
-			*(mas + i*width * 4 + j * 4 + 3) = 255;
+			if(arr[(i)*width + j].rgbtGreen == 255)//истиный зеленый = прозрачный
+				*(mas + i * width * 4 + j * 4 + 3) = 0;
+			else
+				*(mas + i*width * 4 + j * 4 + 3) = 255;
 		}
 	*out = mas;
 	return 1;

@@ -194,14 +194,14 @@ public:
 				otherMaxY = other[i].posZ + other[i].height / 2.;
 
 				//отображение точек хитбокса
-				glPointSize(5.0);
+				/*glPointSize(5.0);
 				glColor3f(1.0, 0.0, 0.0);
 				glBegin(GL_POINTS);
 				glVertex3d(thisFrontX, thisFrontY, 1);
 				glVertex3d(thisBackX, thisBackY, 1);
 				glVertex3d(thisLeftX, thisLeftY, 1);
 				glVertex3d(thisRightX, thisRightY, 1);
-				glEnd();
+				glEnd();*/
 
 				if (!onlyFront) {
 					// Проверка по оси X
@@ -240,7 +240,7 @@ public:
 	double velocity, points;
 	bool frontBlock{ 0 }, backBlock{ 0 };
 	bool visible{ 1 };
-	int dieAngl{ 0 };
+	int dieAngl{ 0 }, HP{3};
 
 	character(double width, double height, double depth, double posX, double posY, double posZ)
 		: velocity(0), hitBox(width, height, depth, posX, posY, posZ){}
@@ -345,7 +345,7 @@ public:
 	}
 };
 
-character Fox(1, 2.5, 2, 0, 0, 0);
+character Fox(0.5, 2.5, 2, 0, 0, 0);
 
 class WASDcamera :public CustomCamera
 {
@@ -420,7 +420,7 @@ void mouseWheelEvent(OpenGL *ogl, int delta)
 
 ObjFile MFox, MApple, MTrash, MTree, MRock, MGrass, MFlower, MLowgrass, MKaban;
 
-Texture TFox, TApple, TTrash, TTree, TRock, TGrass, TFlower, TLowgrass, TKaban;
+Texture TFox, TApple, TTrash, TTree, TRock, TGrass, TFlower, TLowgrass, TKaban, THP;
 
 const double scaleFox = 0.02; //коэф уменьшения модельки
 
@@ -434,9 +434,9 @@ int updateTime = updateApple;
 std::vector<item> Trash;
 const int trashCount = 15;
 
-hitBox Tree[3] = { hitBox(1, 1, 2, -8, 0, -6),
-				hitBox(1, 1, 2, 4, 0, 2) ,
-				hitBox(1, 1, 2, -3, 0, 8) };
+hitBox Tree[3] = { hitBox(0.8, 0.8, 2, -8, 0, -6),
+				hitBox(0.8, 0.8, 2, 4, 0, 2) ,
+				hitBox(0.8, 0.8, 2, -3, 0, 8) };
 
 hitBox Rock(8, 8, 8, 6, 2, -6);
 fromTo Kaban(2, 2, 2);
@@ -495,11 +495,7 @@ void initRender(OpenGL *ogl)
 	//включаем текстуры
 	glEnable(GL_TEXTURE_2D);
 	
-	
 
-
-	//камеру и свет привязываем к "движку"
-	//ogl->mainCamera = &camera;
 	ogl->mainCamera = camera;
 
 	ogl->mainLight = &light;
@@ -509,16 +505,6 @@ void initRender(OpenGL *ogl)
 
 	// устранение ступенчатости для линий
 	glEnable(GL_LINE_SMOOTH); 
-
-
-	//   задать параметры освещения
-	//  параметр GL_LIGHT_MODEL_TWO_SIDE - 
-	//                0 -  лицевые и изнаночные рисуются одинаково(по умолчанию), 
-	//                1 - лицевые и изнаночные обрабатываются разными режимами       
-	//                соответственно лицевым и изнаночным свойствам материалов.    
-	//  параметр GL_LIGHT_MODEL_AMBIENT - задать фоновое освещение, 
-	//                не зависящее от сточников
-	// по умолчанию (0.2, 0.2, 0.2, 1.0)
 
 	glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, 0);
 	
@@ -562,6 +548,8 @@ void initRender(OpenGL *ogl)
 
 	modelTexture(Kaban, "goose", "goose");
 
+	THP.loadTextureFromFile("textures//heart.bmp");
+
 	tick_n = GetTickCount();
 	tick_o = tick_n;
 
@@ -572,13 +560,13 @@ void initRender(OpenGL *ogl)
 	int x, y, angl;
 	for (int i{ 1 }; i <= appleCount; i++) {
 		getRandXY(x, y);
-		Apple.push_back(item(1, 1, 1, x, 0, y));
+		Apple.push_back(item(0.5, 0.5, 1, x, 0, y));
 	}
 	for (int i{ 1 }; i <= trashCount; i++) {
 		do// чтоб морковки не спавнились в центре
 			getRandXY(x, y);
 		while (x >= -1 && x <= 1 && y <= 1 && y >= -1);
-		Trash.push_back(item(1, 1, 1, x, 0, y));
+		Trash.push_back(item(0.8, 0.8, 1, x, 0, y));
 	}
 
 	for (int i{ 1 }; i <= 30; i++) {
@@ -678,7 +666,7 @@ void move() {
 			}
 	}
 
-	if (Fox.isCollidingVEC(Trash) 
+	if (Fox.isCollidingVEC(Trash, 1) 
 		|| fabs(Fox.posX) > mapWH 
 		|| fabs(Fox.posZ) > mapWH
 		|| Fox.isColliding(&Kaban, 0, 0,Kaban.visible)
@@ -744,7 +732,7 @@ void Render(OpenGL* ogl)
 		updateTime += updateApple;
 	}
 
-	if (Time >= updateTime - 5)
+	if (1)
 		Kaban.visible = true;
 
 	glActiveTexture(GL_TEXTURE0);
@@ -965,8 +953,8 @@ void RenderGUI(OpenGL* ogl)
 	glActiveTexture(GL_TEXTURE0);
 
 	GuiTextRectangle rec;
-	rec.setSize(400, 200);
-	rec.setPosition(10, ogl->getHeight() - 200 - 10);
+	rec.setSize(500, 400);
+	rec.setPosition(10, ogl->getHeight() - 400 - 10);
 
 
 	std::stringstream ss;
@@ -975,13 +963,44 @@ void RenderGUI(OpenGL* ogl)
 	ss << "Переродиться - R" << std::endl;
 	ss << "Включить хитбоксы - B" << std::endl << std::endl;
 	ss << "Коорд. лисы: (" << Fox.posX << ", " << Fox.posZ << ", " << Fox.posY << ")" << " angl = " << (int)Fox.angl % 360 << std::endl;
-	ss << "Коорд. кабана: (" << Kaban.posX << ", " << Kaban.posZ << ", " << Kaban.posY << ")" << " angl = " << (int)Kaban.angl % 360 << std::endl;
 	ss << "Очки: " << Fox.points << std::endl;
-	ss << "Time: " << Time << std::endl;
 	ss << "~~~~~~~~~~~~~" << std::endl;
 	ss << "Рекорд: " << record << std::endl;
 	rec.setText(ss.str().c_str());
 	rec.Draw();
+
+	glEnable(GL_TEXTURE_2D);
+	THP.bindTexture();
+
+	double center = ogl->getWidth() / 2.;
+	
+	for (int i{ 1 }; i <= Fox.HP; i++) {
+		glBegin(GL_QUADS);
+		glTexCoord2f(0.0f, 0.0f); glVertex2f(center - 150/2. + 50 * (i-1), 50);
+		glTexCoord2f(1.0f, 0.0f); glVertex2f(center - 150 / 2. + 50 * (i), 50);
+		glTexCoord2f(1.0f, 1.0f); glVertex2f(center - 150 / 2. + 50 * (i), 50 + 50);
+		glTexCoord2f(0.0f, 1.0f); glVertex2f(center - 150 / 2. + 50 * (i - 1), 50 + 50);
+		glEnd();
+	}
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	if (stop) {
+		GuiTextRectangle die;
+		die.setSize(800, 400);
+		die.setPosition(ogl->getWidth()/2. - 400, ogl->getHeight()/2.- 200);
+
+		glColor4f(1,0,0,0.2);
+		glBegin(GL_QUADS);
+		glVertex2f(0,0);
+		glVertex2f(ogl->getWidth(), 0);
+		glVertex2f(ogl->getWidth(), ogl->getHeight());
+		glVertex2f(0, ogl->getHeight());
+		glEnd();
+
+		std::string str = "УМЕР";
+		die.setText(str.c_str(),300,0,0,255);
+		die.Draw();
+	}
 
 	Shader::DontUseShaders();
 

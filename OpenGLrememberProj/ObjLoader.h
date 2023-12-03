@@ -69,7 +69,7 @@ struct ObjFile
 	
 	int listId=-1;
 
-	inline void RenderModel(int mode)
+	inline void RenderModel(int mode, double windSpeed = 0)
 	{
 		for (std::list<ObjFace>::iterator it = Faces.begin(); it != Faces.end(); ++it)
 		{
@@ -83,7 +83,6 @@ struct ObjFile
 
 			for (auto j = it->vertex.begin(); j != it->vertex.end(); ++j)
 			{
-
 				if (f_n)
 				{
 					glNormal3dv((it_n++)->_ptr());

@@ -119,8 +119,10 @@ void GuiTextRectangle::setPosition(int x, int y)
 	d_func()->pos_y = y;
 }
 
-void GuiTextRectangle::setText(const char* text, char r, char g , char b )
+void GuiTextRectangle::setText(const char* text, int fontSize, int r, int g , int b )
 {
+	glEnable(GL_LINE_SMOOTH);
+
 	GuiTextRectanglePrivate *_d = d_func();
 	_d->r.right = _d->w;
 	_d->r.bottom = _d->h;
@@ -128,8 +130,13 @@ void GuiTextRectangle::setText(const char* text, char r, char g , char b )
 	std::fill<byte*, byte>((byte*)(_d->b), (byte*)(_d->b) + _d->w * _d->h * 3, (byte)255);
 
 	SetBkColor(_d->dc, RGB(255, 255, 255));
-	SetTextColor(_d->dc, RGB(0, 255, 0));
+	SetTextColor(_d->dc, RGB(r, g, b));
 	
+	HFONT font = CreateFontA(fontSize, 0, 0, 0, 100, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+		CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH | FF_SWISS, "Arial");
+
+	SelectObject(_d->dc, font);
+
 	//рисуем текст
 	DrawText(_d->dc, text, -1, &(_d->r), 0);
 	//биндим айдишник, все что будет происходить с текстурой, будте происходить по этому »ƒ
@@ -145,9 +152,10 @@ void GuiTextRectangle::setText(const char* text, char r, char g , char b )
 			*(_tmp + i*_d->w * 4 + j * 4 + 1) = *(_d->b + i*_d->w * 3 + j * 3 + 1);
 			*(_tmp + i*_d->w * 4 + j * 4 + 2) = *(_d->b + i*_d->w * 3 + j * 3 + 2);
 
-			if (*(_tmp + i*_d->w * 4 + j * 4 + 0) == 255 &&
-				*(_tmp + i*_d->w * 4 + j * 4 + 1) == 255 &&
-				*(_tmp + i*_d->w * 4 + j * 4 + 2) == 255)
+			if (
+				*(_tmp + i * _d->w * 4 + j * 4 + 0) == 255 &&
+				*(_tmp + i * _d->w * 4 + j * 4 + 1) == 255 &&
+				*(_tmp + i * _d->w * 4 + j * 4 + 2) == 255)
 				
 				*(_tmp + i*_d->w * 4 + j * 4 + 3) = 0;
 			else

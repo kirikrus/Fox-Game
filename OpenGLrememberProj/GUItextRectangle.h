@@ -22,7 +22,7 @@ public:
 
 	void setPosition(int x, int y);
 
-	void setText(const char* text, char r = 0, char g = 0, char b = 0);
+	void setText(const char* text, int fontSize = 24, int r = 0, int g = 0, int b = 0);
 
 	void Draw();
 };
