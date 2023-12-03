@@ -365,7 +365,7 @@ float zoom=1;
 float Time = 0;
 int tick_o = 0;
 int tick_n = 0;
-bool stop{ 0 }, isHitBox{ 0 };
+bool stop{ 0 }, isHitBox{ 0 }, pause{0};
 
 //обработчик движени€ мыши
 void mouseEvent(OpenGL *ogl, int mX, int mY)
@@ -482,6 +482,10 @@ void keyDownEvent(OpenGL* ogl, int key) {
 	//хитбоксы
 	if (OpenGL::isKeyPressed('B'))
 		isHitBox = !isHitBox;
+
+	//пауза
+	if (OpenGL::isKeyPressed('P'))
+		pause = !pause;
 }
 
 void keyUpEvent(OpenGL* ogl, int key) {}
@@ -735,14 +739,14 @@ void kabanGo() {
 
 void Render(OpenGL* ogl)
 {
+	if(!pause)
+		if (!stop) {
+			tick_o = tick_n;
+			tick_n = GetTickCount();
+			Time += (tick_n - tick_o) / 1000.0;
+		}
 
-	if (!stop) {
-		tick_o = tick_n;
-		tick_n = GetTickCount();
-		Time += (tick_n - tick_o) / 1000.0;
-	}
-
-	if(Time >= updateTime){ //проверка времени респавна €блок
+	if (Time >= updateTime) { //проверка времени респавна €блок
 		int x, y;
 		Apple.clear();
 		for (int i{ 1 }; i <= appleCount; i++) {
@@ -783,10 +787,11 @@ void Render(OpenGL* ogl)
 	//размер блика
 	glMaterialf(GL_FRONT, GL_SHININESS, sh);
 
+	if (!pause) {
+		kabanGo();
+		move();
+	}
 
-	kabanGo();
-	move();
-	
 
 	s[0].UseShader();
 
@@ -816,7 +821,7 @@ void Render(OpenGL* ogl)
 
 	location = glGetUniformLocationARB(s[0].program, "camera");
 	glUniform3fARB(location, camera.pos.X(), camera.pos.Y(), camera.pos.Z());
-	
+
 	//хитбоксы
 	if (isHitBox) {
 		RenderHitBox(Fox, 1);
@@ -833,12 +838,12 @@ void Render(OpenGL* ogl)
 	s[1].UseShader();
 	for (auto& flower : Flower) {
 		PUSH;
-			glRotated(90, 1.0, 0.0, 0.0);
-			glTranslated(flower.x, 0, -flower.y);
-			glRotated(flower.angl, 0.0, 1.0, 0.0);
-			glScaled(2, 2, 2);
-			TFlower.bindTexture();
-			MFlower.DrawObj();
+		glRotated(90, 1.0, 0.0, 0.0);
+		glTranslated(flower.x, 0, -flower.y);
+		glRotated(flower.angl, 0.0, 1.0, 0.0);
+		glScaled(2, 2, 2);
+		TFlower.bindTexture();
+		MFlower.DrawObj();
 		POP;
 	}
 
@@ -856,10 +861,10 @@ void Render(OpenGL* ogl)
 
 	//трава
 	PUSH;
-		glScaled(40, 40, 3);
-		glTranslated(0, 0, -0.25);
-		TGrass.bindTexture();
-		MGrass.DrawObj();
+	glScaled(40, 40, 3);
+	glTranslated(0, 0, -0.25);
+	TGrass.bindTexture();
+	MGrass.DrawObj();
 	POP;
 
 	int l = glGetUniformLocationARB(s[1].program, "rock");
@@ -867,11 +872,11 @@ void Render(OpenGL* ogl)
 
 	//—кала
 	PUSH;
-		glRotated(90, 1.0, 0.0, 0.0);
-		glTranslated(Rock.posX, Rock.posY, -Rock.posZ);
-		glScaled(5, 5, 5);
-		TRock.bindTexture();
-		MRock.DrawObj();
+	glRotated(90, 1.0, 0.0, 0.0);
+	glTranslated(Rock.posX, Rock.posY, -Rock.posZ);
+	glScaled(5, 5, 5);
+	TRock.bindTexture();
+	MRock.DrawObj();
 	POP;
 
 	l = glGetUniformLocationARB(s[1].program, "tree");
@@ -883,12 +888,12 @@ void Render(OpenGL* ogl)
 	Tree[2].angl = 18;
 	for (auto& tree : Tree) {
 		PUSH;
-			glRotated(90, 1.0, 0.0, 0.0);
-			glTranslated(tree.posX, tree.posY, -tree.posZ);
-			glRotated(tree.angl, 0.0, 1.0, 0.0);
-			glScaled(0.01, 0.01, 0.01);
-			TTree.bindTexture();
-			MTree.DrawObj();
+		glRotated(90, 1.0, 0.0, 0.0);
+		glTranslated(tree.posX, tree.posY, -tree.posZ);
+		glRotated(tree.angl, 0.0, 1.0, 0.0);
+		glScaled(0.01, 0.01, 0.01);
+		TTree.bindTexture();
+		MTree.DrawObj();
 		POP;
 	}
 
@@ -898,25 +903,25 @@ void Render(OpenGL* ogl)
 	//морковь
 	for (auto& Trash : Trash) {
 		PUSH;
-			glRotated(90, 1.0, 0.0, 0.0);
-			glTranslated(Trash.posX, Trash.posY, -Trash.posZ);
-			glScaled(0.1, 0.1, 0.1);
-			TTrash.bindTexture();
-			MTrash.DrawObj();
+		glRotated(90, 1.0, 0.0, 0.0);
+		glTranslated(Trash.posX, Trash.posY, -Trash.posZ);
+		glScaled(0.1, 0.1, 0.1);
+		TTrash.bindTexture();
+		MTrash.DrawObj();
 		POP;
 	}
 
 	//€блоко
-	for(auto& Apple : Apple){
+	for (auto& Apple : Apple) {
 		l = glGetUniformLocationARB(s[1].program, "Rapple");
 		glUniform1iARB(l, 0);
 
 		PUSH;
-			glRotated(90, 1.0, 0.0, 0.0);
-			glTranslated(Apple.posX, Apple.posY, -Apple.posZ);
-			glScaled(0.1, 0.1, 0.1);
-			TApple.bindTexture();
-			MApple.DrawObj();
+		glRotated(90, 1.0, 0.0, 0.0);
+		glTranslated(Apple.posX, Apple.posY, -Apple.posZ);
+		glScaled(0.1, 0.1, 0.1);
+		TApple.bindTexture();
+		MApple.DrawObj();
 		POP;
 	}
 	//√усь
@@ -924,13 +929,13 @@ void Render(OpenGL* ogl)
 		l = glGetUniformLocationARB(s[1].program, "goose");
 		glUniform1iARB(l, 0);
 		PUSH;
-			glRotated(90, 1.0, 0.0, 0.0);
-			glTranslated(Kaban.posX, Kaban.posY, -Kaban.posZ);
-			glScaled(1, 1, 1);
-			glRotated(Kaban.angl, 0.0, 1.0, 0.0);
+		glRotated(90, 1.0, 0.0, 0.0);
+		glTranslated(Kaban.posX, Kaban.posY, -Kaban.posZ);
+		glScaled(1, 1, 1);
+		glRotated(Kaban.angl, 0.0, 1.0, 0.0);
 
-			TKaban.bindTexture();
-			MKaban.DrawObj();
+		TKaban.bindTexture();
+		MKaban.DrawObj();
 		POP;
 	}
 
@@ -940,25 +945,24 @@ void Render(OpenGL* ogl)
 		glUniform1iARB(l, 0);
 
 		PUSH;
-			glRotated(90, 1.0, 0.0, 0.0);
-			glTranslated(Fox.posX, Fox.posY, -Fox.posZ);
-			glScaled(scaleFox, scaleFox, scaleFox);
-			glRotated(Fox.angl, 0.0, 1.0, 0.0);
-			glRotated(Fox.dieAngl, 0.0, 0.0, 1.0);
+		glRotated(90, 1.0, 0.0, 0.0);
+		glTranslated(Fox.posX, Fox.posY, -Fox.posZ);
+		glScaled(scaleFox, scaleFox, scaleFox);
+		glRotated(Fox.angl, 0.0, 1.0, 0.0);
+		glRotated(Fox.dieAngl, 0.0, 0.0, 1.0);
 
-			TFox.bindTexture();
-			MFox.DrawObj();
+		TFox.bindTexture();
+		MFox.DrawObj();
 		POP;
 	}
 	Shader::DontUseShaders();
-	
-}   //конец тела функции
+}
 
 
 bool gui_init = false;
 
 //рисует интерфейс, вызыветс€ после обычного рендера
-void RenderGUI(OpenGL * ogl)
+void RenderGUI(OpenGL* ogl)
 {
 	Shader::DontUseShaders();
 
@@ -972,13 +976,13 @@ void RenderGUI(OpenGL * ogl)
 
 	glActiveTexture(GL_TEXTURE0);
 
-	GuiTextRectangle rec;		
+	GuiTextRectangle rec;
 	rec.setSize(400, 150);
 	rec.setPosition(10, ogl->getHeight() - 150 - 10);
 
 
 	std::stringstream ss;
-	ss << mouseX << mouseY << std::endl;
+	ss << mouseX << " " << mouseY << std::endl;
 	ss << "ѕереродитьс€ - R" << std::endl;
 	ss << "¬ключить хитбоксы - B" << std::endl << std::endl;
 	ss << " оорд. лисы: (" << Fox.posX << ", " << Fox.posZ << ", " << Fox.posY << ")" << " angl = " << (int)Fox.angl % 360 << std::endl;
