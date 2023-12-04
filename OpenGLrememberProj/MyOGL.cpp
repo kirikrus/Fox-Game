@@ -75,16 +75,22 @@ void OpenGL::mouseMovie(int mX, int mY)
 	MapWindowPoints(g_hWnd, nullptr, reinterpret_cast<POINT*>(&rect), 2);
 	ClipCursor(&rect);
 
-	if (mX <= rect.left || mX >= rect.right || mY <= rect.top || mY >= rect.bottom)
-	{
-		// Курсор достиг края окна, перемещаем его на противоположную сторону
-		int newX = (mX <= rect.left) ? rect.right - 1 : ((mX >= rect.right) ? rect.left + 1 : mX);
-		int newY = (mY <= rect.top) ? rect.bottom - 1 : ((mY >= rect.bottom) ? rect.top + 1 : mY);
+	//if (mX <= rect.left || mX >= rect.right || mY <= rect.top || mY >= rect.bottom)
+	//{
+	//	// Курсор достиг края окна, перемещаем его на противоположную сторону
+	//	int newX = mX,
+	//		newY = mY;
+	//	
+	//	if (mX <= rect.left) newX = rect.right - 2;
+	//	if (mX >= rect.right - 1) newX = rect.left + 1;
 
-		SetCursorPos(newX, newY);
-		mX = newX;
-		mY = newY;
-	}
+	//	if (mY <= rect.top) newY = rect.bottom + 2;
+	//	if (mY >= rect.bottom + 1) newY = rect.top - 1;
+
+	//	SetCursorPos(newX, newY);
+	//	mX = newX;
+	//	mY = newY;
+	//}
 
 	for (unsigned char i = 0; i < mouseFunc.size(); i++)
 	{

@@ -237,10 +237,10 @@ public:
 
 class character : public hitBox {
 public:
-	double velocity, points;
+	double velocity, points, lastHitTime{ 0 };
 	bool frontBlock{ 0 }, backBlock{ 0 };
 	bool visible{ 1 };
-	int dieAngl{ 0 }, HP{3};
+	int dieAngl{ 0 }, HP{1};
 
 	character(double width, double height, double depth, double posX, double posY, double posZ)
 		: velocity(0), hitBox(width, height, depth, posX, posY, posZ){}
@@ -292,6 +292,8 @@ public:
 		frontBlock = false;
 		backBlock = false;
 		points = 0;
+		HP = 1;
+		lastHitTime = 0;
 	}
 };
 
@@ -414,13 +416,13 @@ void mouseWheelEvent(OpenGL *ogl, int delta)
 		return;
 	if (delta > 0 && camera->camDist >= 100)
 		return;
-
+	
 	camera->camDist += 0.01*delta;
 }
 
 ObjFile MFox, MApple, MTrash, MTree, MRock, MGrass, MFlower, MLowgrass, MKaban;
 
-Texture TFox, TApple, TTrash, TTree, TRock, TGrass, TFlower, TLowgrass, TKaban, THP;
+Texture TFox, TApple, TTrash, TTree, TRock, TGrass, TFlower, TLowgrass, TKaban, THP, TGapple;
 
 const double scaleFox = 0.02; //коэф уменьшени€ модельки
 
@@ -429,7 +431,11 @@ std::vector<lowModel> Flower, Lowgrass;
 std::vector<item> Apple;
 const int appleCount = 5;
 const int updateApple = 10;
-int updateTime = updateApple;
+int updateTimeApple = updateApple;
+
+item Gapple(0.8, 0.8, 2, -8, 0, -6);
+const int updateGapple = 5;
+int updateTimeGapple = updateGapple;
 
 std::vector<item> Trash;
 const int trashCount = 15;
@@ -441,14 +447,15 @@ hitBox Tree[3] = { hitBox(0.8, 0.8, 2, -8, 0, -6),
 hitBox Rock(8, 8, 8, 6, 2, -6);
 fromTo Kaban(2, 2, 2);
 
-int record{ 0 };
+int record{ 0 }, dieCount{ 0 };
 
 //обработчик нажати€ кнопок клавиатуры
 void keyDownEvent(OpenGL* ogl, int key) {
 	//респавн
 	if (OpenGL::isKeyPressed('R')) {
 		Fox.alive();
-		updateTime = updateApple;
+		updateTimeApple = updateApple;
+		updateTimeGapple = updateGapple;
 		Time = 0;
 		stop = false;
 	}
@@ -547,6 +554,8 @@ void initRender(OpenGL *ogl)
 	modelTexture(Lowgrass, "lowgrass", "lowgrass2");
 
 	modelTexture(Kaban, "goose", "goose");
+	
+	TGapple.loadTextureFromFile("textures//Gapple.bmp");
 
 	THP.loadTextureFromFile("textures//heart.bmp");
 
@@ -583,6 +592,7 @@ void initRender(OpenGL *ogl)
 
 	Fox.velocity = 4 * scaleFox;
 	Kaban.velocity = 0.15;
+	Gapple.visible = false;
 }
 
 void normalize(double& x, double& y) {
@@ -666,18 +676,30 @@ void move() {
 			}
 	}
 
-	if (Fox.isCollidingVEC(Trash, 1) 
-		|| fabs(Fox.posX) > mapWH 
+	if (Fox.isCollidingVEC(Trash, 1)
+		|| fabs(Fox.posX) > mapWH
 		|| fabs(Fox.posZ) > mapWH
-		|| Fox.isColliding(&Kaban, 0, 0,Kaban.visible)
+		|| Fox.isColliding(&Kaban, 0, 0, Kaban.visible)
 		|| Fox.dieAngl > 0)
+		if (Time - Fox.lastHitTime >= 1) {
+			--Fox.HP;
+			Fox.lastHitTime = Time;
+		}
+
+	if (Fox.HP == 0)
 		if (Fox.dieAngl != 45) {
 			Fox.dieAngl++;
+			Fox.dieAngl == 1 ? dieCount++: dieCount;
 			stop = true;
 			record = Fox.points > record ? Fox.points : record;
 		}
 		else
 			Fox.visible = 0;
+
+	if (Fox.isColliding(&Gapple, 0, 0, Gapple.visible)) {
+		Gapple.visible = false;
+		Fox.HP++;
+	}
 
 	int appleInd = Fox.isCollidingVEC(Apple);
 	if (appleInd--) {
@@ -722,14 +744,28 @@ void Render(OpenGL* ogl)
 			Time += (tick_n - tick_o) / 1000.0;
 		}
 
-	if (Time >= updateTime) { //проверка времени респавна €блок
+	if (Time >= updateTimeGapple && Gapple.visible == false) {
+		int x, y;
+		getRandXY(x, y);
+		Gapple.posX = x;
+		Gapple.posZ = y;
+		Gapple.visible = true;
+		updateTimeGapple += updateGapple;
+	}
+	if (Time >= updateTimeGapple && Gapple.visible == true) {
+		Gapple.visible = false;
+		updateTimeGapple += updateGapple;
+	}
+
+
+	if (Time >= updateTimeApple) { //проверка времени респавна €блок
 		int x, y;
 		Apple.clear();
 		for (int i{ 1 }; i <= appleCount; i++) {
 			getRandXY(x, y);
 			Apple.push_back(item(1, 1, 1, x, 0, y));
 		}
-		updateTime += updateApple;
+		updateTimeApple += updateApple;
 	}
 
 	if (1)
@@ -843,9 +879,6 @@ void Render(OpenGL* ogl)
 	MGrass.DrawObj();
 	POP;
 
-	int l = glGetUniformLocationARB(s[1].program, "rock");
-	glUniform1iARB(l, 0);
-
 	//—кала
 	PUSH;
 	glRotated(90, 1.0, 0.0, 0.0);
@@ -854,9 +887,6 @@ void Render(OpenGL* ogl)
 	TRock.bindTexture();
 	MRock.DrawObj();
 	POP;
-
-	l = glGetUniformLocationARB(s[1].program, "tree");
-	glUniform1iARB(l, 0);
 
 	//деревь€
 	Tree[0].angl = 180;
@@ -873,9 +903,6 @@ void Render(OpenGL* ogl)
 		POP;
 	}
 
-	l = glGetUniformLocationARB(s[1].program, "carrot");
-	glUniform1iARB(l, 0);
-
 	//морковь
 	for (auto& Trash : Trash) {
 		PUSH;
@@ -889,9 +916,6 @@ void Render(OpenGL* ogl)
 
 	//€блоко
 	for (auto& Apple : Apple) {
-		l = glGetUniformLocationARB(s[1].program, "Rapple");
-		glUniform1iARB(l, 0);
-
 		PUSH;
 		glRotated(90, 1.0, 0.0, 0.0);
 		glTranslated(Apple.posX, Apple.posY, -Apple.posZ);
@@ -900,16 +924,25 @@ void Render(OpenGL* ogl)
 		MApple.DrawObj();
 		POP;
 	}
+
+	//хилл €блоко
+	if (Gapple.visible) {
+		PUSH;
+		glRotated(90, 1.0, 0.0, 0.0);
+		glTranslated(Gapple.posX, Gapple.posY, -Gapple.posZ);
+		glScaled(0.1, 0.1, 0.1);
+		TGapple.bindTexture();
+		MApple.DrawObj();
+		POP;
+	}
+
 	//√усь
 	if (Kaban.visible) {
-		l = glGetUniformLocationARB(s[1].program, "goose");
-		glUniform1iARB(l, 0);
 		PUSH;
 		glRotated(90, 1.0, 0.0, 0.0);
 		glTranslated(Kaban.posX, Kaban.posY, -Kaban.posZ);
 		glScaled(1, 1, 1);
 		glRotated(Kaban.angl, 0.0, 1.0, 0.0);
-
 		TKaban.bindTexture();
 		MKaban.DrawObj();
 		POP;
@@ -917,16 +950,12 @@ void Render(OpenGL* ogl)
 
 	//лиса
 	if (Fox.visible) {
-		l = glGetUniformLocationARB(s[1].program, "Lowpoly_Fox");
-		glUniform1iARB(l, 0);
-
 		PUSH;
 		glRotated(90, 1.0, 0.0, 0.0);
 		glTranslated(Fox.posX, Fox.posY, -Fox.posZ);
 		glScaled(scaleFox, scaleFox, scaleFox);
 		glRotated(Fox.angl, 0.0, 1.0, 0.0);
 		glRotated(Fox.dieAngl, 0.0, 0.0, 1.0);
-
 		TFox.bindTexture();
 		MFox.DrawObj();
 		POP;
@@ -958,6 +987,7 @@ void RenderGUI(OpenGL* ogl)
 
 
 	std::stringstream ss;
+	ss << "¬рем€: " << Time << std::endl;
 	ss << "—менить вид - F" << std::endl;
 	ss << "ѕауза - P" << std::endl;
 	ss << "ѕереродитьс€ - R" << std::endl;
@@ -966,6 +996,7 @@ void RenderGUI(OpenGL* ogl)
 	ss << "ќчки: " << Fox.points << std::endl;
 	ss << "~~~~~~~~~~~~~" << std::endl;
 	ss << "–екорд: " << record << std::endl;
+	ss << "„исло смертей: " << dieCount << std::endl;
 	rec.setText(ss.str().c_str());
 	rec.Draw();
 
@@ -1001,6 +1032,17 @@ void RenderGUI(OpenGL* ogl)
 		die.setText(str.c_str(),300,0,0,255);
 		die.Draw();
 	}
+
+	GuiTextRectangle rec_;
+	rec_.setSize(100, 100);
+	rec_.setPosition(ogl->getWidth() - 100, ogl->getHeight() - 100);
+	std::stringstream coord;
+
+	coord << mouseX << " " << mouseY << std::endl;
+	coord << ogl->getWidth() << " " << ogl->getHeight() << std::endl;
+
+	rec_.setText(coord.str().c_str());
+	rec_.Draw();
 
 	Shader::DontUseShaders();
 
