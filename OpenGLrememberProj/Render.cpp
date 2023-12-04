@@ -372,7 +372,7 @@ public:
 //старые координаты мыши
 int mouseX = 0, mouseY = 0;
 
-float offsetX = 0, offsetY = 0;
+int centerX, centerY;
 float zoom=1;
 float Time = 0;
 int tick_o = 0;
@@ -382,33 +382,59 @@ bool stop{ 0 }, isHitBox{ 0 }, pause{0};
 Camera* camera = &CAM;
 int cameraType = 0;
 
+void centerMouse(HWND hwnd) {//УРАА
+	RECT clientRect;
+	GetClientRect(hwnd, &clientRect);
+
+	centerX = clientRect.left + (clientRect.right - clientRect.left) / 2;
+	centerY = clientRect.top + (clientRect.bottom - clientRect.top) / 2;
+
+	// Преобразуем координаты в экранные
+	POINT clientToScreenPoint;
+	clientToScreenPoint.x = centerX;
+	clientToScreenPoint.y = centerY;
+	ClientToScreen(hwnd, &clientToScreenPoint);
+
+	// Устанавливаем указатель мыши в центр окна
+	SetCursorPos(clientToScreenPoint.x, clientToScreenPoint.y);
+}
+
 //обработчик движения мыши
-void mouseEvent(OpenGL *ogl, int mX, int mY)
-{
-	int dx = mouseX - mX;
-	int dy = mouseY - mY;
+void mouseEvent(OpenGL* ogl, int mX, int mY){
+	double dx = centerX - mX;
+	double dy = centerY - mY;
+
+	if (dx == 0 && dy == 0) { return; }
+
+	if (cameraType == 1)
+	{
+		centerMouse(ogl->getHwnd());
+
+		double sensitivity = 0.01;
+		dx *= sensitivity;
+		dy *= -sensitivity;
+
+		camera->fi1 += dx;
+		camera->fi2 += dy;
+	}
+
+	if (OpenGL::isKeyPressed(VK_RBUTTON)){
+		dx = mouseX - mX;
+		dy = mouseY - mY;
+
+		camera->fi1 += 0.01 * dx;
+		camera->fi2 += -0.01 * dy;
+	}
 	mouseX = mX;
 	mouseY = mY;
-	
-	if (cameraType == 1) {
-		camera->fi1 += 0.01 * dx;
-		camera->fi2 += -0.01 * dy;
-	}
-	
-	if (OpenGL::isKeyPressed(VK_RBUTTON))
-	{
-		camera->fi1 += 0.01 * dx;
-		camera->fi2 += -0.01 * dy;
-	}
 }
+
 
 //обработчик вращения колеса  мыши
 void mouseWheelEvent(OpenGL *ogl, int delta)
 {
 
 	float _tmpZ = delta*0.003;
-	if (ogl->isKeyPressed('Z'))
-		_tmpZ *= 10;
 	zoom += 0.2*zoom*_tmpZ;
 
 
@@ -422,7 +448,7 @@ void mouseWheelEvent(OpenGL *ogl, int delta)
 
 ObjFile MFox, MApple, MTrash, MTree, MRock, MGrass, MFlower, MLowgrass, MKaban;
 
-Texture TFox, TApple, TTrash, TTree, TRock, TGrass, TFlower, TLowgrass, TKaban, THP, TGapple;
+Texture TFox, TApple, TTrash, TTree, TRock, TGrass, TFlower, TLowgrass, TKaban, THP, TGapple, TFon;
 
 const double scaleFox = 0.02; //коэф уменьшения модельки
 
@@ -479,6 +505,8 @@ void keyDownEvent(OpenGL* ogl, int key) {
 			cameraType = 1;
 			ogl->mainCamera = &WASDCAM;
 			camera = &WASDCAM;
+
+			centerMouse(ogl->getHwnd());
 		}
 	}
 }
@@ -559,12 +587,10 @@ void initRender(OpenGL *ogl)
 
 	THP.loadTextureFromFile("textures//heart.bmp");
 
+	TFon.loadTextureFromFile("textures//fon1.bmp");
+
 	tick_n = GetTickCount();
 	tick_o = tick_n;
-
-	rec.setSize(300, 100);
-	rec.setPosition(10, ogl->getHeight() - 100-10);
-	rec.setText("T - вкл/выкл текстур\nL - вкл/выкл освещение\nF - Свет из камеры\nG - двигать свет по горизонтали\nG+ЛКМ двигать свет по вертекали",0,0,0);
 
 	int x, y, angl;
 	for (int i{ 1 }; i <= appleCount; i++) {
@@ -679,14 +705,19 @@ void move() {
 	if (Fox.isCollidingVEC(Trash, 1)
 		|| fabs(Fox.posX) > mapWH
 		|| fabs(Fox.posZ) > mapWH
-		|| Fox.isColliding(&Kaban, 0, 0, Kaban.visible)
 		|| Fox.dieAngl > 0)
 		if (Time - Fox.lastHitTime >= 1) {
 			--Fox.HP;
 			Fox.lastHitTime = Time;
 		}
 
-	if (Fox.HP == 0)
+	if (Fox.isColliding(&Kaban, 0, 0, Kaban.visible))		
+		if (Time - Fox.lastHitTime >= 1) {
+			Fox.HP -= 2;
+			Fox.lastHitTime = Time;
+		}
+
+	if (Fox.HP <= 0)
 		if (Fox.dieAngl != 45) {
 			Fox.dieAngl++;
 			Fox.dieAngl == 1 ? dieCount++: dieCount;
@@ -752,11 +783,11 @@ void Render(OpenGL* ogl)
 		Gapple.visible = true;
 		updateTimeGapple += updateGapple;
 	}
+
 	if (Time >= updateTimeGapple && Gapple.visible == true) {
 		Gapple.visible = false;
 		updateTimeGapple += updateGapple;
 	}
-
 
 	if (Time >= updateTimeApple) { //проверка времени респавна яблок
 		int x, y;
@@ -771,68 +802,12 @@ void Render(OpenGL* ogl)
 	if (1)
 		Kaban.visible = true;
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	glDisable(GL_TEXTURE_2D);
-	glDisable(GL_LIGHTING);
-
 	glEnable(GL_DEPTH_TEST);
-	if (textureMode)
-		glEnable(GL_TEXTURE_2D);
-
-	if (lightMode)
-		glEnable(GL_LIGHTING);
-
-	//настройка материала
-	GLfloat amb[] = { 0.2, 0.2, 0.1, 1. };
-	GLfloat dif[] = { 0.4, 0.65, 0.5, 1. };
-	GLfloat spec[] = { 0.9, 0.8, 0.3, 1. };
-	GLfloat sh = 0.1f * 256;
-
-	//фоновая
-	glMaterialfv(GL_FRONT, GL_AMBIENT, amb);
-	//дифузная
-	glMaterialfv(GL_FRONT, GL_DIFFUSE, dif);
-	//зеркальная
-	glMaterialfv(GL_FRONT, GL_SPECULAR, spec);
-	//размер блика
-	glMaterialf(GL_FRONT, GL_SHININESS, sh);
 
 	if (!pause) {
 		kabanGo();
 		move();
 	}
-
-
-	s[0].UseShader();
-
-	//передача параметров в шейдер.  Шаг один - ищем адрес uniform переменной по ее имени. 
-	int location = glGetUniformLocationARB(s[0].program, "light_pos");
-	//Шаг 2 - передаем ей значение
-	glUniform3fARB(location, light.pos.X(), light.pos.Y(), light.pos.Z());
-
-	location = glGetUniformLocationARB(s[0].program, "Ia");
-	glUniform3fARB(location, 0.2, 0.2, 0.2);
-
-	location = glGetUniformLocationARB(s[0].program, "Id");
-	glUniform3fARB(location, 1.0, 1.0, 1.0);
-
-	location = glGetUniformLocationARB(s[0].program, "Is");
-	glUniform3fARB(location, .7, .7, .7);
-
-
-	location = glGetUniformLocationARB(s[0].program, "ma");
-	glUniform3fARB(location, 0.2, 0.2, 0.1);
-
-	location = glGetUniformLocationARB(s[0].program, "md");
-	glUniform3fARB(location, 0.4, 0.65, 0.5);
-
-	location = glGetUniformLocationARB(s[0].program, "ms");
-	glUniform4fARB(location, 0.9, 0.8, 0.3, 25.6);
-
-	location = glGetUniformLocationARB(s[0].program, "camera");
-	glUniform3fARB(location, camera->pos.X(), camera->pos.Y(), camera->pos.Z());
 
 	//хитбоксы
 	if (isHitBox) {
@@ -960,6 +935,28 @@ void Render(OpenGL* ogl)
 		MFox.DrawObj();
 		POP;
 	}
+
+	//фон
+	if (cameraType == 1) {
+		glEnable(GL_TEXTURE_2D);
+		TFon.bindTexture();
+		PUSH;
+		glTranslated(0, 0, -5);
+		glBegin(GL_QUAD_STRIP);
+		for (int i = 0; i <= 10; ++i) {
+			float a = (2. * M_PI * i) / 10;
+			float x = 20 * cos(a);
+			float y = 20 * sin(a);
+
+			glTexCoord2f(i / 10., 0.);
+			glVertex3f(x, y, 0);
+
+			glTexCoord2f(i / 10., 1.);
+			glVertex3f(x, y, 20);
+		}
+		glEnd();
+		POP;
+	}
 	Shader::DontUseShaders();
 }
 
@@ -1040,6 +1037,7 @@ void RenderGUI(OpenGL* ogl)
 
 	coord << mouseX << " " << mouseY << std::endl;
 	coord << ogl->getWidth() << " " << ogl->getHeight() << std::endl;
+	coord << centerX << " " << centerY << std::endl;
 
 	rec_.setText(coord.str().c_str());
 	rec_.Draw();

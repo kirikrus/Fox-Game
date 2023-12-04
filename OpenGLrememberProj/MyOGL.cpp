@@ -69,29 +69,6 @@ void OpenGL::setHWND(HWND window)
 
 void OpenGL::mouseMovie(int mX, int mY)
 {
-	// Ограничиваем движение мыши в пределах окна
-	RECT rect;
-	GetClientRect(g_hWnd, &rect);
-	MapWindowPoints(g_hWnd, nullptr, reinterpret_cast<POINT*>(&rect), 2);
-	ClipCursor(&rect);
-
-	//if (mX <= rect.left || mX >= rect.right || mY <= rect.top || mY >= rect.bottom)
-	//{
-	//	// Курсор достиг края окна, перемещаем его на противоположную сторону
-	//	int newX = mX,
-	//		newY = mY;
-	//	
-	//	if (mX <= rect.left) newX = rect.right - 2;
-	//	if (mX >= rect.right - 1) newX = rect.left + 1;
-
-	//	if (mY <= rect.top) newY = rect.bottom + 2;
-	//	if (mY >= rect.bottom + 1) newY = rect.top - 1;
-
-	//	SetCursorPos(newX, newY);
-	//	mX = newX;
-	//	mY = newY;
-	//}
-
 	for (unsigned char i = 0; i < mouseFunc.size(); i++)
 	{
 		(*mouseFunc[i])(this, mX, mY);
@@ -310,7 +287,7 @@ void OpenGL::init(void)
 
 	g_hRC = wglCreateContext(g_hDC);
 	wglMakeCurrent(g_hDC, g_hRC);
-	glClearColor(107/255., 145 / 255., 179 / 255., 1.0f);
+	glClearColor(125/255., 168 / 255., 184 / 255., 1.0f);
 	glEnable(GL_DEPTH_TEST);
 
 
